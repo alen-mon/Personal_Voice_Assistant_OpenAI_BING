@@ -1,3 +1,4 @@
+from flask import Flask, request, jsonify
 from os import system
 from EdgeGPT.EdgeUtils import Query
 import speech_recognition as sr
@@ -7,6 +8,9 @@ import asyncio
 import threading
 import warnings
 
+# Your other imports and code here...
+
+app = Flask(__name__)
 # Wake word variables
 BING_WAKE_WORD = "bing"
 GPT_WAKE_WORD = "darwin"
@@ -163,8 +167,6 @@ def callback(recognizer, audio):
     elif not bing_engine:
         print("Using GPT engine.")
         prompt_gpt(audio)
-
-
 async def async_main():
     with source as s:
         r.adjust_for_ambient_noise(s, duration=2)
@@ -173,6 +175,25 @@ async def async_main():
     while True:
         await asyncio.sleep(1)
 
+
+@app.route('/wake-word', methods=['POST'])
+def wake_word():
+    global listening_for_wake_word
+    global bing_engine
+    if request.method == 'POST':
+        data = request.get_json()
+        audio_data = data.get('audio_data')
+
+        if listening_for_wake_word:
+            listen_for_wake_word(audio_data)
+        elif bing_engine:
+            print("Using Bing engine.")
+            prompt_bing(audio_data)
+        elif not bing_engine:
+            print("Using GPT engine.")
+            prompt_gpt(audio_data)
+
+        return jsonify({"message": "Request processed"})
 
 if __name__ == '__main__':
     asyncio.run(async_main())
